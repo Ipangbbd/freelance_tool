@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freelance Tools — Document Generator Dashboard</title>
+  
+  <!-- Fonts: Inter & JetBrains Mono for Linear Design System -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            canvas: '#010102',
+            'surface-1': '#0f1011',
+            'surface-2': '#141516',
+            'surface-3': '#18191a',
+            'surface-4': '#191a1b',
+            hairline: '#23252a',
+            'hairline-strong': '#34343a',
+            'hairline-tertiary': '#3e3e44',
+            primary: {
+              DEFAULT: '#5e6ad2',
+              hover: '#828fff',
+              focus: '#5e69d1',
+            },
+            ink: {
+              DEFAULT: '#f7f8f8',
+              muted: '#d0d6e0',
+              subtle: '#8a8f98',
+              tertiary: '#62666d',
+            },
+            'semantic-success': '#27a644',
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
+          },
+          letterSpacing: {
+            display: '-0.6px',
+            body: '-0.05px',
+            eyebrow: '0.4px',
+          },
+          borderRadius: {
+            xs: '4px',
+            sm: '6px',
+            md: '8px',
+            lg: '12px',
+            xl: '16px',
+            xxl: '24px',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- jsPDF & docx.js CDNs for client-side export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+
+  <style>
+    /* Linear Design System Global Overrides */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #010102;
+      color: #f7f8f8;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      letter-spacing: -0.05px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Linear Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #010102;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #23252a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #34343a;
+    }
+
+    /* Form control styling */
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+      background-color: #0f1011;
+      border: 1px solid #23252a;
+      color: #f7f8f8;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    input[type="date"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #5e6ad2;
+      box-shadow: 0 0 0 1px #5e6ad2;
+    }
+    
+    /* Checkbox custom style */
+    .linear-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background-color: #0f1011;
+      border: 1px solid #23252a;
+      border-radius: 4px;
+      display: inline-grid;
+      place-content: center;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+    .linear-checkbox:hover {
+      border-color: #34343a;
+    }
+    .linear-checkbox:checked {
+      background-color: #5e6ad2;
+      border-color: #5e6ad2;
+    }
+    .linear-checkbox:checked::before {
+      content: "";
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #ffffff;
+      border-bottom: 2px solid #ffffff;
+      transform: rotate(-45deg) translate(1px, -1px);
+    }
+
+    /* Toast animation */
+    @keyframes slideUpFade {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-toast {
+      animation: slideUpFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Print media styling */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      #sidebar, #form-container, #doc-tabs, #export-toolbar, #history-section, #toast-container {
+        display: none !important;
+      }
+      #preview-paper {
+        border: none !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-canvas text-ink min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-white">
+
+  <!-- ========================================== -->
+  <!-- /* SIDEBAR */ -->
+  <!-- ========================================== -->
+  <aside id="sidebar" class="w-full md:w-[240px] flex-shrink-0 bg-canvas border-b md:border-b-0 md:border-r border-hairline flex flex-col justify-between select-none z-30">
+    <div>
+      <!-- Header / Brand -->
+      <div class="h-14 px-4 flex items-center justify-between border-b border-hairline">
+        <div class="flex items-center gap-2.5">
+          <!-- Linear-style geometric logo mark -->
+          <div class="w-6 h-6 rounded-md bg-surface-2 border border-hairline flex items-center justify-center text-primary">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
+              <path d="M1.5 2.5a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11zm2 1v9h9v-9h-9zM6 5h4v2H6V5zm0 4h4v2H6V9z" opacity="0.3"/>
+              <path d="M2.5 13.5L13.5 2.5" stroke="#5e6ad2" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="2.5" cy="13.5" r="1.5" fill="#5e6ad2"/>
+              <circle cx="13.5" cy="2.5" r="1.5" fill="#5e6ad2"/>
+            </svg>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold tracking-tight text-ink">Freelance Tools</span>
+            <span class="text-[10px] text-ink-subtle font-mono tracking-normal leading-none mt-0.5">WO STUDIO v1.0</span>
+          </div>
+        </div>
+
+        <!-- Mobile sidebar toggle -->
+        <button id="mobile-menu-toggle" class="md:hidden p-1.5 rounded-md hover:bg-surface-1 text-ink-subtle hover:text-ink border border-hairline">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+
+      <!-- Navigation Section -->
+      <div id="sidebar-nav-container" class="hidden md:block p-3">
+        <div class="text-[11px] font-medium text-ink-tertiary uppercase tracking-eyebrow px-2.5 py-1.5">
+          Tools
+        </div>
+        <nav class="space-y-1 mt-1">
+          <!-- Document Generator (Active) -->
+          <button 
+            data-page="doc-generator" 
+            onclick="App.switchPage('doc-generator')" 
+            class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-md text-sm font-medium transition-colors bg-surface-2 text-ink border border-hairline">
+            <div class="flex items-center gap-2.5">
+              <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Document Generator</span>
+            </div>
+            <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+          </button>
+
+          <!-- Lead Tracker (Disabled / Soon) -->
+          <button 
+            data-page="lead-tracker" 
+            onclick="App.showComingSoon('Lead Tracker')" 
+            class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-md text-sm font-normal text-ink-subtle hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer group">
+            <div class="flex items-center gap-2.5">
+              <svg class="w-4 h-4 text-ink-tertiary group-hover:text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+              <span>Lead Tracker</span>
+            </div>
+            <span class="text-[10px] uppercase font-mono font-medium tracking-wide px-1.5 py-0.5 rounded-full bg-surface-2 border border-hairline text-ink-subtle">Soon</span>
+          </button>
+
+          <!-- Project Tracker (Disabled / Soon) -->
+          <button 
+            data-page="project-tracker" 
+            onclick="App.showComingSoon('Project Tracker')" 
+            class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-md text-sm font-normal text-ink-subtle hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer group">
+            <div class="flex items-center gap-2.5">
+              <svg class="w-4 h-4 text-ink-tertiary group-hover:text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+              </svg>
+              <span>Project Tracker</span>
+            </div>
+            <span class="text-[10px] uppercase font-mono font-medium tracking-wide px-1.5 py-0.5 rounded-full bg-surface-2 border border-hairline text-ink-subtle">Soon</span>
+          </button>
+
+          <!-- Asset Bank (Disabled / Soon) -->
+          <button 
+            data-page="asset-bank" 
+            onclick="App.showComingSoon('Asset Bank')" 
+            class="nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-md text-sm font-normal text-ink-subtle hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer group">
+            <div class="flex items-center gap-2.5">
+              <svg class="w-4 h-4 text-ink-tertiary group-hover:text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span>Asset Bank</span>
+            </div>
+            <span class="text-[10px] uppercase font-mono font-medium tracking-wide px-1.5 py-0.5 rounded-full bg-surface-2 border border-hairline text-ink-subtle">Soon</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Sidebar Footer: Settings & Profile -->
+    <div class="p-3 border-t border-hairline bg-canvas">
+      <button 
+        onclick="App.openSettingsModal()" 
+        class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-sm font-medium text-ink-subtle hover:text-ink hover:bg-surface-1 transition-colors border border-transparent hover:border-hairline">
+        <div class="flex items-center gap-2.5">
+          <svg class="w-4 h-4 text-ink-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span>Settings</span>
+        </div>
+        <span class="text-[11px] font-mono text-ink-tertiary">⚙</span>
+      </button>
+
+      <div class="mt-2 pt-2 border-t border-hairline/50 flex items-center justify-between px-2.5 text-xs text-ink-tertiary">
+        <span class="truncate">WO Client Generator</span>
+        <span class="w-2 h-2 rounded-full bg-semantic-success inline-block" title="Ready"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========================================== -->
+  <!-- MAIN CONTENT AREA -->
+  <!-- ========================================== -->
+  <main id="main-content" class="flex-1 flex flex-col min-w-0 bg-canvas overflow-y-auto min-h-screen">
+    
+    <!-- Top Bar -->
+    <header class="h-14 px-6 border-b border-hairline flex items-center justify-between bg-canvas sticky top-0 z-20">
+      <div class="flex items-center gap-3">
+        <h1 id="page-title" class="text-sm font-semibold tracking-display text-ink flex items-center gap-2">
+          <span>Document Generator</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-surface-2 border border-hairline text-ink-subtle font-normal">Wedding Organizer Focus</span>
+        </h1>
+      </div>
+      
+      <!-- Quick Form Actions -->
+      <div class="flex items-center gap-2">
+        <button 
+          onclick="App.loadSampleData()" 
+          class="px-2.5 py-1.5 rounded-md text-xs font-medium bg-surface-1 border border-hairline hover:border-hairline-strong text-ink-muted hover:text-ink transition-colors flex items-center gap-1.5"
+          title="Load sample Wedding Organizer client data">
+          <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span>Load Sample WO Data</span>
+        </button>
+        <button 
+          onclick="App.saveCurrentToHistory()" 
+          class="px-2.5 py-1.5 rounded-md text-xs font-medium bg-surface-1 border border-hairline hover:border-hairline-strong text-ink-muted hover:text-ink transition-colors flex items-center gap-1.5"
+          title="Save this client to local history list">
+          <svg class="w-3.5 h-3.5 text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+          <span>Save Client</span>
+        </button>
+        <button 
+          onclick="App.resetForm()" 
+          class="p-1.5 rounded-md text-xs bg-surface-1 border border-hairline hover:border-hairline-strong text-ink-tertiary hover:text-ink transition-colors"
+          title="Reset input form">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Body Container -->
+    <div id="page-container" class="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
+      
+      <!-- ========================================== -->
+      <!-- /* CLIENT INPUT */ -->
+      <!-- ========================================== -->
+      <section id="form-container" class="bg-surface-1 border border-hairline rounded-lg p-5 transition-all">
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-hairline">
+          <div>
+            <h2 class="text-sm font-semibold tracking-display text-ink flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+              Shared Client & Project Input
+            </h2>
+            <p class="text-xs text-ink-subtle mt-0.5">All updates immediately sync live with all four document types and persist in localStorage.</p>
+          </div>
+          <div class="text-[11px] font-mono text-ink-tertiary flex items-center gap-1.5">
+            <span id="sync-indicator" class="w-1.5 h-1.5 rounded-full bg-semantic-success inline-block"></span>
+            <span>Auto-saved</span>
+          </div>
+        </div>
+
+        <form id="shared-form" onsubmit="event.preventDefault();" class="space-y-4">
+          <!-- Row 1: Client & Brand Information -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div>
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Client Contact Name</label>
+              <input 
+                type="text" 
+                id="clientName" 
+                name="clientName" 
+                placeholder="e.g. Amanda Putri & Dimas" 
+                class="w-full px-3 py-2 text-sm focus:border-primary">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Brand / Agency Name</label>
+              <input 
+                type="text" 
+                id="brandName" 
+                name="brandName" 
+                placeholder="e.g. Elegance Wedding Organizer" 
+                class="w-full px-3 py-2 text-sm focus:border-primary">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Instagram Handle</label>
+              <input 
+                type="text" 
+                id="instagramHandle" 
+                name="instagramHandle" 
+                placeholder="e.g. @elegance.wo" 
+                class="w-full px-3 py-2 text-sm focus:border-primary">
+            </div>
+          </div>
+
+          <!-- Row 2: Package Name & Pricing -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start">
+            <div class="md:col-span-4">
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Package Selected</label>
+              <select 
+                id="packageNameSelect" 
+                name="packageNameSelect" 
+                onchange="App.handlePackageChange()" 
+                class="w-full px-3 py-2 text-sm focus:border-primary">
+                <option value="Basic Landing Page">Basic Landing Page</option>
+                <option value="Standard">Standard (Recommended)</option>
+                <option value="Premium">Premium Full Suite</option>
+                <option value="__custom__">Custom Package...</option>
+              </select>
+              <!-- Custom Package input if selected -->
+              <input 
+                type="text" 
+                id="packageNameCustom" 
+                placeholder="Enter custom package name" 
+                class="w-full mt-2 px-3 py-1.5 text-xs hidden focus:border-primary">
+            </div>
+
+            <div class="md:col-span-4">
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Package Price (IDR)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2 text-xs font-mono text-ink-subtle">Rp</span>
+                <input 
+                  type="number" 
+                  id="packagePrice" 
+                  name="packagePrice" 
+                  step="50000" 
+                  min="0" 
+                  placeholder="3500000" 
+                  class="w-full pl-9 pr-3 py-2 text-sm font-mono focus:border-primary">
+              </div>
+              <p id="formatted-price-hint" class="text-[11px] font-mono text-ink-subtle mt-1 truncate">Rp 3.500.000</p>
+            </div>
+
+            <div class="md:col-span-4">
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Down Payment (DP %)</label>
+              <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                  <input 
+                    type="number" 
+                    id="dpPercentage" 
+                    name="dpPercentage" 
+                    min="10" 
+                    max="100" 
+                    value="50" 
+                    class="w-full px-3 py-2 text-sm font-mono focus:border-primary">
+                  <span class="absolute right-3 top-2 text-xs font-mono text-ink-subtle">%</span>
+                </div>
+                <div class="text-[11px] font-mono text-ink-subtle whitespace-nowrap bg-surface-2 px-2.5 py-2 rounded-md border border-hairline">
+                  DP: <span id="dp-amount-badge" class="text-ink font-semibold">Rp 1.750.000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Features Checkboxes (Tailored for Wedding Organizer websites) -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-medium text-ink-muted">Included Features & Sections</label>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="App.selectAllFeatures(true)" class="text-[11px] text-primary hover:underline">Select all</button>
+                <span class="text-ink-tertiary">•</span>
+                <button type="button" onclick="App.selectAllFeatures(false)" class="text-[11px] text-ink-subtle hover:underline">Deselect all</button>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="Hero Section" class="linear-checkbox" checked>
+                <span class="text-ink">Hero Section</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="About Us" class="linear-checkbox" checked>
+                <span class="text-ink">About Us</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="Portfolio Gallery" class="linear-checkbox" checked>
+                <span class="text-ink">Portfolio Gallery</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="Pricing Packages" class="linear-checkbox" checked>
+                <span class="text-ink">Pricing Packages</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="Client Testimonials" class="linear-checkbox" checked>
+                <span class="text-ink">Client Testimonials</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="WhatsApp Button" class="linear-checkbox" checked>
+                <span class="text-ink">WhatsApp Button</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="Maps" class="linear-checkbox" checked>
+                <span class="text-ink">Google Maps</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-2 rounded-md bg-surface-2 border border-hairline hover:border-hairline-strong cursor-pointer text-xs transition-colors">
+                <input type="checkbox" name="feature" value="SEO" class="linear-checkbox" checked>
+                <span class="text-ink">SEO Optimization</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Row 4: Deadline, Revisions -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+            <div>
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Project Deadline / Launch Target</label>
+              <input 
+                type="date" 
+                id="deadline" 
+                name="deadline" 
+                class="w-full px-3 py-2 text-sm focus:border-primary">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-ink-muted mb-1.5">Revision Limit (Rounds)</label>
+              <input 
+                type="number" 
+                id="revisionLimit" 
+                name="revisionLimit" 
+                min="1" 
+                max="10" 
+                value="2" 
+                class="w-full px-3 py-2 text-sm font-mono focus:border-primary">
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- /* SELECTOR */ -->
+      <!-- ========================================== -->
+      <section class="space-y-4">
+        
+        <!-- Document Selector & Export Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-1 border border-hairline rounded-lg p-2.5">
+          <!-- Document Selector Tabs -->
+          <div id="doc-tabs" class="flex items-center gap-1 overflow-x-auto p-1 bg-canvas border border-hairline rounded-md">
+            <button 
+              data-tab="proposal" 
+              onclick="App.switchTab('proposal')" 
+              class="doc-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all bg-surface-2 text-ink border border-hairline flex items-center gap-1.5 whitespace-nowrap">
+              <span>Proposal</span>
+            </button>
+            <button 
+              data-tab="invoice" 
+              onclick="App.switchTab('invoice')" 
+              class="doc-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-ink-subtle hover:text-ink hover:bg-surface-1 border border-transparent whitespace-nowrap">
+              <span>Invoice</span>
+            </button>
+            <button 
+              data-tab="agreement" 
+              onclick="App.switchTab('agreement')" 
+              class="doc-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-ink-subtle hover:text-ink hover:bg-surface-1 border border-transparent whitespace-nowrap">
+              <span>Agreement (SPK)</span>
+            </button>
+            <button 
+              data-tab="email" 
+              onclick="App.switchTab('email')" 
+              class="doc-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-ink-subtle hover:text-ink hover:bg-surface-1 border border-transparent whitespace-nowrap">
+              <span>Welcome Email</span>
+            </button>
+          </div>
+
+          <!-- ========================================== -->
+          <!-- /* EXPORT LOGIC */ -->
+          <!-- ========================================== -->
+          <div id="export-toolbar" class="flex items-center gap-2 self-end sm:self-auto">
+            <!-- View Mode Toggle (Visual vs Raw Text) -->
+            <button 
+              id="btn-toggle-view"
+              onclick="App.toggleRawView()" 
+              class="px-2.5 py-1.5 rounded-md text-xs font-medium bg-surface-2 border border-hairline hover:border-hairline-strong text-ink-subtle hover:text-ink transition-colors flex items-center gap-1.5"
+              title="Toggle between Visual Document & Plain Text view">
+              <span id="view-mode-label">Plain Text</span>
+            </button>
+
+            <!-- Copy Text Button -->
+            <button 
+              onclick="App.copyCurrentDocument()" 
+              class="px-3 py-1.5 rounded-md text-xs font-medium bg-surface-2 border border-hairline hover:border-hairline-strong text-ink transition-colors flex items-center gap-1.5"
+              title="Copy active document text to clipboard">
+              <svg class="w-3.5 h-3.5 text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <span>Copy</span>
+            </button>
+
+            <!-- Download DOCX Button -->
+            <button 
+              onclick="App.downloadDOCX()" 
+              class="px-3 py-1.5 rounded-md text-xs font-medium bg-surface-2 border border-hairline hover:border-hairline-strong text-ink transition-colors flex items-center gap-1.5"
+              title="Export formatted Word document (.docx)">
+              <svg class="w-3.5 h-3.5 text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>DOCX</span>
+            </button>
+
+            <!-- Download PDF Button (Primary CTA) -->
+            <button 
+              onclick="App.downloadPDF()" 
+              class="px-3.5 py-1.5 rounded-md text-xs font-medium bg-primary hover:bg-primary-hover text-white transition-colors flex items-center gap-1.5 shadow-sm"
+              title="Export print-ready PDF document (.pdf)">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Document Live Preview Container -->
+        <div id="preview-panel" class="relative bg-surface-1 border border-hairline rounded-lg p-5 md:p-8 min-h-[460px] transition-all">
+          
+          <!-- Visual Document Render -->
+          <div id="visual-preview" class="max-w-3xl mx-auto space-y-6">
+            <!-- Dynamic content injected by App.renderCurrentTab() -->
+          </div>
+
+          <!-- Raw Plaintext Preview (Hidden by default) -->
+          <div id="raw-preview" class="hidden max-w-3xl mx-auto">
+            <div class="flex items-center justify-between pb-2 mb-3 border-b border-hairline">
+              <span class="text-xs font-mono text-ink-subtle">Plain Text / Markdown Format:</span>
+              <span class="text-[11px] text-ink-tertiary font-mono">Ready to paste to WhatsApp or Email</span>
+            </div>
+            <pre id="raw-text-content" class="bg-canvas border border-hairline rounded-md p-4 text-xs font-mono text-ink-muted whitespace-pre-wrap leading-relaxed select-all overflow-x-auto"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- CLIENT HISTORY LIST (localStorage) -->
+      <!-- ========================================== -->
+      <section id="history-section" class="bg-surface-1 border border-hairline rounded-lg p-5">
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-hairline">
+          <div>
+            <h3 class="text-sm font-semibold tracking-display text-ink flex items-center gap-2">
+              <svg class="w-4 h-4 text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Saved Clients & History
+            </h3>
+            <p class="text-xs text-ink-subtle mt-0.5">Quickly restore previous clients into the generator form.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="history-count" class="text-xs font-mono text-ink-tertiary">0 saved</span>
+            <button 
+              onclick="App.clearHistory()" 
+              id="btn-clear-history" 
+              class="text-xs text-ink-tertiary hover:text-ink px-2 py-1 rounded hover:bg-surface-2 transition-colors hidden">
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        <div id="history-list-container" class="space-y-2">
+          <!-- Dynamically populated or empty state -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ========================================== -->
+  <!-- SETTINGS MODAL -->
+  <!-- ========================================== -->
+  <div id="settings-modal" class="fixed inset-0 bg-canvas/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface-1 border border-hairline rounded-lg w-full max-w-md p-5 space-y-4 shadow-2xl animate-toast">
+      <div class="flex items-center justify-between pb-3 border-b border-hairline">
+        <h3 class="text-sm font-semibold text-ink flex items-center gap-2">
+          <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Agency & Generator Settings
+        </h3>
+        <button onclick="App.closeSettingsModal()" class="text-ink-subtle hover:text-ink text-sm">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-ink-muted mb-1">Freelance Studio Name (Your Brand)</label>
+          <input type="text" id="setting-studio-name" value="Freelance Web Studio" class="w-full px-3 py-1.5">
+        </div>
+        <div>
+          <label class="block font-medium text-ink-muted mb-1">Default Bank & Account (for Invoices)</label>
+          <input type="text" id="setting-bank-details" value="Bank Central Asia (BCA) — 822-019-3841 a/n Studio Digital" class="w-full px-3 py-1.5">
+        </div>
+        <div>
+          <label class="block font-medium text-ink-muted mb-1">WhatsApp Contact (for Inquiries/Receipts)</label>
+          <input type="text" id="setting-wa-number" value="+62 812-3456-7890" class="w-full px-3 py-1.5">
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-hairline flex items-center justify-between">
+        <button onclick="App.exportAllDataJSON()" class="text-xs text-ink-subtle hover:text-ink underline">Export Backup (JSON)</button>
+        <div class="flex items-center gap-2">
+          <button onclick="App.closeSettingsModal()" class="px-3 py-1.5 rounded-md text-xs bg-surface-2 border border-hairline hover:bg-surface-3 text-ink">Cancel</button>
+          <button onclick="App.saveSettings()" class="px-3 py-1.5 rounded-md text-xs bg-primary hover:bg-primary-hover text-white">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 pointer-events-none space-y-2"></div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <!-- ========================================== -->
+  <script>
+    /* ========================================== */
+    /* APPLICATION STATE & CORE CONFIG */
+    /* ========================================== */
+    const STORAGE_KEY_FORM = 'freelance_tools_form_v1';
+    const STORAGE_KEY_HISTORY = 'freelance_tools_history_v1';
+    const STORAGE_KEY_SETTINGS = 'freelance_tools_settings_v1';
+
+    const defaultFormData = {
+      clientName: 'Amanda Putri & Dimas',
+      brandName: 'Elegance Wedding Organizer',
+      instagramHandle: '@elegance.wo',
+      packageName: 'Standard',
+      packagePrice: 4500000,
+      dpPercentage: 50,
+      features: ['Hero Section', 'About Us', 'Portfolio Gallery', 'Pricing Packages', 'Client Testimonials', 'WhatsApp Button', 'Maps', 'SEO'],
+      deadline: '2026-11-20',
+      revisionLimit: 2,
+    };
+
+    const defaultSettings = {
+      studioName: 'Studio Freelance Web Specialist',
+      bankDetails: 'Bank Central Asia (BCA) — 822-019-3841 a/n Studio Digital',
+      waNumber: '+62 812-3456-7890'
+    };
+
+    const App = {
+      currentTab: 'proposal',
+      activeView: 'visual', // 'visual' or 'raw'
+      activePage: 'doc-generator',
+      state: { ...defaultFormData },
+      settings: { ...defaultSettings },
+
+      init() {
+        this.loadSettings();
+        this.loadFormState();
+        this.bindEvents();
+        this.renderHistory();
+        this.renderCurrentTab();
+
+        // Responsive mobile sidebar toggle
+        const toggleBtn = document.getElementById('mobile-menu-toggle');
+        const navContainer = document.getElementById('sidebar-nav-container');
+        if (toggleBtn && navContainer) {
+          toggleBtn.addEventListener('click', () => {
+            navContainer.classList.toggle('hidden');
+          });
+        }
+      },
+
+      /* ========================================== */
+      /* STORAGE & PERSISTENCE */
+      /* ========================================== */
+      loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
+          if (raw) {
+            this.settings = { ...defaultSettings, ...JSON.parse(raw) };
+          }
+        } catch (e) {
+          console.warn('Failed loading settings', e);
+        }
+      },
+
+      saveSettings() {
+        const studio = document.getElementById('setting-studio-name').value;
+        const bank = document.getElementById('setting-bank-details').value;
+        const wa = document.getElementById('setting-wa-number').value;
+        this.settings = { studioName: studio, bankDetails: bank, waNumber: wa };
+        localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(this.settings));
+        this.closeSettingsModal();
+        this.renderCurrentTab();
+        this.showToast('Settings saved successfully');
+      },
+
+      openSettingsModal() {
+        document.getElementById('setting-studio-name').value = this.settings.studioName || '';
+        document.getElementById('setting-bank-details').value = this.settings.bankDetails || '';
+        document.getElementById('setting-wa-number').value = this.settings.waNumber || '';
+        document.getElementById('settings-modal').classList.remove('hidden');
+      },
+
+      closeSettingsModal() {
+        document.getElementById('settings-modal').classList.add('hidden');
+      },
+
+      loadFormState() {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY_FORM);
+          if (saved) {
+            this.state = { ...defaultFormData, ...JSON.parse(saved) };
+          } else {
+            // Set default deadline to +14 days from now if not specified
+            const date = new Date();
+            date.setDate(date.getDate() + 14);
+            this.state.deadline = date.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          console.warn('Failed loading stored form state', e);
+          this.state = { ...defaultFormData };
+        }
+        this.populateFormFields();
+      },
+
+      saveFormState() {
+        try {
+          localStorage.setItem(STORAGE_KEY_FORM, JSON.stringify(this.state));
+          const indicator = document.getElementById('sync-indicator');
+          if (indicator) {
+            indicator.classList.remove('bg-semantic-success');
+            indicator.classList.add('bg-primary');
+            setTimeout(() => {
+              indicator.classList.remove('bg-primary');
+              indicator.classList.add('bg-semantic-success');
+            }, 300);
+          }
+        } catch (e) {
+          console.warn('Failed saving form state', e);
+        }
+      },
+
+      populateFormFields() {
+        document.getElementById('clientName').value = this.state.clientName || '';
+        document.getElementById('brandName').value = this.state.brandName || '';
+        document.getElementById('instagramHandle').value = this.state.instagramHandle || '';
+
+        const pkgSelect = document.getElementById('packageNameSelect');
+        const pkgCustom = document.getElementById('packageNameCustom');
+        const knownPackages = ['Basic Landing Page', 'Standard', 'Premium'];
+
+        if (knownPackages.includes(this.state.packageName)) {
+          pkgSelect.value = this.state.packageName;
+          pkgCustom.classList.add('hidden');
+          pkgCustom.value = '';
+        } else {
+          pkgSelect.value = '__custom__';
+          pkgCustom.classList.remove('hidden');
+          pkgCustom.value = this.state.packageName || '';
+        }
+
+        document.getElementById('packagePrice').value = this.state.packagePrice || 0;
+        document.getElementById('dpPercentage').value = this.state.dpPercentage || 50;
+        document.getElementById('deadline').value = this.state.deadline || '';
+        document.getElementById('revisionLimit').value = this.state.revisionLimit || 2;
+
+        // Checkboxes
+        const checkboxes = document.querySelectorAll('input[name="feature"]');
+        checkboxes.forEach(cb => {
+          cb.checked = Array.isArray(this.state.features) && this.state.features.includes(cb.value);
+        });
+
+        this.updateCalculatedBadges();
+      },
+
+      /* ========================================== */
+      /* CLIENT INPUT: EVENT HANDLING */
+      /* ========================================== */
+      bindEvents() {
+        const form = document.getElementById('shared-form');
+        const handleInputChange = () => {
+          this.readFormValues();
+          this.updateCalculatedBadges();
+          this.saveFormState();
+          this.renderCurrentTab();
+        };
+
+        form.addEventListener('input', handleInputChange);
+        form.addEventListener('change', handleInputChange);
+
+        // Escape closes modal
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') this.closeSettingsModal();
+        });
+      },
+
+      readFormValues() {
+        this.state.clientName = document.getElementById('clientName').value.trim();
+        this.state.brandName = document.getElementById('brandName').value.trim();
+        this.state.instagramHandle = document.getElementById('instagramHandle').value.trim();
+
+        const pkgSelect = document.getElementById('packageNameSelect').value;
+        if (pkgSelect === '__custom__') {
+          this.state.packageName = document.getElementById('packageNameCustom').value.trim() || 'Custom Package';
+        } else {
+          this.state.packageName = pkgSelect;
+        }
+
+        this.state.packagePrice = parseFloat(document.getElementById('packagePrice').value) || 0;
+        this.state.dpPercentage = parseInt(document.getElementById('dpPercentage').value, 10) || 50;
+        this.state.deadline = document.getElementById('deadline').value;
+        this.state.revisionLimit = parseInt(document.getElementById('revisionLimit').value, 10) || 2;
+
+        const checkedBoxes = Array.from(document.querySelectorAll('input[name="feature"]:checked'));
+        this.state.features = checkedBoxes.map(cb => cb.value);
+      },
+
+      handlePackageChange() {
+        const pkgSelect = document.getElementById('packageNameSelect').value;
+        const customInput = document.getElementById('packageNameCustom');
+        const priceInput = document.getElementById('packagePrice');
+
+        if (pkgSelect === '__custom__') {
+          customInput.classList.remove('hidden');
+          customInput.focus();
+        } else {
+          customInput.classList.add('hidden');
+          customInput.value = '';
+
+          // Helpful presets for Wedding Organizer tier suggestions if user selects them
+          if (pkgSelect === 'Basic Landing Page' && (!priceInput.value || priceInput.value == 4500000 || priceInput.value == 7500000)) {
+            priceInput.value = 2500000;
+          } else if (pkgSelect === 'Standard' && (!priceInput.value || priceInput.value == 2500000 || priceInput.value == 7500000)) {
+            priceInput.value = 4500000;
+          } else if (pkgSelect === 'Premium' && (!priceInput.value || priceInput.value == 2500000 || priceInput.value == 4500000)) {
+            priceInput.value = 7500000;
+          }
+        }
+        this.readFormValues();
+        this.updateCalculatedBadges();
+        this.saveFormState();
+        this.renderCurrentTab();
+      },
+
+      selectAllFeatures(select) {
+        document.querySelectorAll('input[name="feature"]').forEach(cb => {
+          cb.checked = select;
+        });
+        this.readFormValues();
+        this.saveFormState();
+        this.renderCurrentTab();
+      },
+
+      updateCalculatedBadges() {
+        const price = this.state.packagePrice || 0;
+        const dpPercent = this.state.dpPercentage || 50;
+        const dpAmount = Math.round((price * dpPercent) / 100);
+
+        document.getElementById('formatted-price-hint').textContent = this.formatCurrency(price);
+        document.getElementById('dp-amount-badge').textContent = this.formatCurrency(dpAmount);
+      },
+
+      formatCurrency(val) {
+        return 'Rp ' + Number(val || 0).toLocaleString('id-ID');
+      },
+
+      formatDate(dateString) {
+        if (!dateString) return 'TBA (Within 14 business days)';
+        try {
+          const d = new Date(dateString);
+          return d.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
+        } catch {
+          return dateString;
+        }
+      },
+
+      loadSampleData() {
+        this.state = {
+          clientName: 'Sarah & Kevin Pratama',
+          brandName: 'Vow & Bloom Wedding Planner',
+          instagramHandle: '@vowandbloom.wo',
+          packageName: 'Standard',
+          packagePrice: 4500000,
+          dpPercentage: 50,
+          features: ['Hero Section', 'About Us', 'Portfolio Gallery', 'Pricing Packages', 'Client Testimonials', 'WhatsApp Button', 'Maps', 'SEO'],
+          deadline: '2026-11-28',
+          revisionLimit: 2,
+        };
+        this.populateFormFields();
+        this.saveFormState();
+        this.renderCurrentTab();
+        this.showToast('Sample Wedding Organizer data loaded');
+      },
+
+      resetForm() {
+        if (!confirm('Reset all shared input fields to blank?')) return;
+        this.state = {
+          clientName: '',
+          brandName: '',
+          instagramHandle: '',
+          packageName: 'Basic Landing Page',
+          packagePrice: 2500000,
+          dpPercentage: 50,
+          features: ['Hero Section', 'About Us', 'Portfolio Gallery', 'WhatsApp Button'],
+          deadline: '',
+          revisionLimit: 2,
+        };
+        this.populateFormFields();
+        this.saveFormState();
+        this.renderCurrentTab();
+        this.showToast('Form has been reset');
+      },
+
+      /* ========================================== */
+      /* SELECTOR: TABS & VIEW MODE */
+      /* ========================================== */
+      switchTab(tabKey) {
+        this.currentTab = tabKey;
+        const buttons = document.querySelectorAll('.doc-tab');
+        buttons.forEach(btn => {
+          if (btn.getAttribute('data-tab') === tabKey) {
+            btn.className = 'doc-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all bg-surface-2 text-ink border border-hairline flex items-center gap-1.5 whitespace-nowrap';
+          } else {
+            btn.className = 'doc-tab px-3.5 py-1.5 rounded-md text-xs font-medium transition-all text-ink-subtle hover:text-ink hover:bg-surface-1 border border-transparent whitespace-nowrap';
+          }
+        });
+        this.renderCurrentTab();
+      },
+
+      toggleRawView() {
+        this.activeView = this.activeView === 'visual' ? 'raw' : 'visual';
+        const visualEl = document.getElementById('visual-preview');
+        const rawEl = document.getElementById('raw-preview');
+        const label = document.getElementById('view-mode-label');
+
+        if (this.activeView === 'raw') {
+          visualEl.classList.add('hidden');
+          rawEl.classList.remove('hidden');
+          label.textContent = 'Visual View';
+        } else {
+          rawEl.classList.add('hidden');
+          visualEl.classList.remove('hidden');
+          label.textContent = 'Plain Text';
+        }
+      },
+
+      /* ========================================== */
+      /* TEMPLATES */
+      /* ========================================== */
+      getComputedValues() {
+        const client = this.state.clientName || '[Nama Klien / Couple]';
+        const brand = this.state.brandName || '[Nama Wedding Organizer]';
+        const ig = this.state.instagramHandle || '@wo.brand';
+        const pkg = this.state.packageName || 'Wedding Landing Page';
+        const price = this.state.packagePrice || 0;
+        const dpPercent = this.state.dpPercentage || 50;
+        const dpAmount = Math.round((price * dpPercent) / 100);
+        const remainingAmount = price - dpAmount;
+        const deadlineFormatted = this.formatDate(this.state.deadline);
+        const revisions = this.state.revisionLimit || 2;
+        const features = this.state.features && this.state.features.length > 0 ? this.state.features : ['Hero Showcase', 'About Us', 'Portfolio Gallery', 'WhatsApp Direct CTA'];
+        const todayFormatted = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
+        const invoiceNo = 'INV/WO/' + new Date().getFullYear() + '/' + Math.floor(1000 + Math.random() * 9000);
+        const agreementNo = 'SPK/WO/' + new Date().getFullYear() + '/' + Math.floor(1000 + Math.random() * 9000);
+
+        return {
+          client,
+          brand,
+          ig,
+          pkg,
+          price,
+          formattedPrice: this.formatCurrency(price),
+          dpPercent,
+          dpAmount,
+          formattedDp: this.formatCurrency(dpAmount),
+          remainingAmount,
+          formattedRemaining: this.formatCurrency(remainingAmount),
+          deadlineFormatted,
+          revisions,
+          features,
+          todayFormatted,
+          invoiceNo,
+          agreementNo,
+          studioName: this.settings.studioName || 'Freelance Web Studio',
+          bankDetails: this.settings.bankDetails || 'BCA 822-019-3841 a/n Studio Digital',
+          waNumber: this.settings.waNumber || '+62 812-3456-7890'
+        };
+      },
+
+      renderCurrentTab() {
+        const data = this.getComputedValues();
+        const visualContainer = document.getElementById('visual-preview');
+        const rawContainer = document.getElementById('raw-text-content');
+
+        let visualHtml = '';
+        let rawText = '';
+
+        switch (this.currentTab) {
+          case 'proposal':
+            ({ visualHtml, rawText } = this.templateProposal(data));
+            break;
+          case 'invoice':
+            ({ visualHtml, rawText } = this.templateInvoice(data));
+            break;
+          case 'agreement':
+            ({ visualHtml, rawText } = this.templateAgreement(data));
+            break;
+          case 'email':
+            ({ visualHtml, rawText } = this.templateWelcomeEmail(data));
+            break;
+        }
+
+        visualContainer.innerHTML = visualHtml;
+        rawContainer.textContent = rawText;
+      },
+
+      /* TEMPLATE 1: PROPOSAL */
+      templateProposal(d) {
+        const featureItems = d.features.map(f => `
+          <div class="flex items-start gap-2.5 p-2 rounded-md bg-canvas border border-hairline">
+            <svg class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <div>
+              <span class="text-xs font-medium text-ink">${f}</span>
+              <p class="text-[11px] text-ink-subtle">Tailored visual layout optimized for bride & groom client engagement.</p>
+            </div>
+          </div>
+        `).join('');
+
+        const visualHtml = `
+          <div id="preview-paper" class="space-y-6">
+            <!-- Header Banner -->
+            <div class="border-b border-hairline pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span class="text-[10px] uppercase font-mono tracking-wider text-primary font-semibold">WEBSITE DEVELOPMENT PROPOSAL</span>
+                <h2 class="text-xl font-bold tracking-tight text-ink mt-0.5">${d.brand}</h2>
+                <p class="text-xs text-ink-subtle">Targeted Landing Page for High-Conversion Wedding Inquiries</p>
+              </div>
+              <div class="text-right sm:text-right text-xs font-mono text-ink-subtle">
+                <div>Date: ${d.todayFormatted}</div>
+                <div>Prepared by: <span class="text-ink">${d.studioName}</span></div>
+              </div>
+            </div>
+
+            <!-- Client & Target Overview -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-canvas border border-hairline rounded-md p-3.5 text-xs">
+              <div>
+                <span class="text-ink-tertiary uppercase text-[10px] block font-mono">Client Contact</span>
+                <span class="font-medium text-ink">${d.client}</span>
+              </div>
+              <div>
+                <span class="text-ink-tertiary uppercase text-[10px] block font-mono">Instagram</span>
+                <span class="font-mono text-primary">${d.ig}</span>
+              </div>
+              <div>
+                <span class="text-ink-tertiary uppercase text-[10px] block font-mono">Target Launch</span>
+                <span class="font-medium text-ink">${d.deadlineFormatted}</span>
+              </div>
+            </div>
+
+            <!-- Executive Pitch -->
+            <div class="text-xs leading-relaxed text-ink-muted space-y-2">
+              <p>
+                To boost <strong class="text-ink">${d.brand}</strong>'s booking inquiries, we propose a modern, mobile-first showcase website. In the wedding industry, prospective couples browse on Instagram and make booking decisions based on immediate visual trust, portfolio aesthetics, transparent packages, and seamless WhatsApp contact.
+              </p>
+            </div>
+
+            <!-- Deliverables & Features Grid -->
+            <div>
+              <div class="text-xs font-semibold text-ink uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                <span>Included Deliverables (${d.pkg})</span>
+                <span class="text-[11px] font-mono font-normal text-ink-subtle">${d.features.length} Features Included</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${featureItems}
+              </div>
+            </div>
+
+            <!-- Investment & Terms Card -->
+            <div class="bg-surface-2 border border-hairline rounded-lg p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-ink-muted">Total Project Investment</span>
+                <span class="text-lg font-bold font-mono text-ink">${d.formattedPrice}</span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-hairline text-xs">
+                <div>
+                  <span class="text-ink-tertiary block text-[10px] uppercase font-mono">Down Payment (${d.dpPercent}%)</span>
+                  <span class="font-mono text-ink font-medium">${d.formattedDp}</span>
+                </div>
+                <div>
+                  <span class="text-ink-tertiary block text-[10px] uppercase font-mono">Balance on Handover</span>
+                  <span class="font-mono text-ink font-medium">${d.formattedRemaining}</span>
+                </div>
+                <div>
+                  <span class="text-ink-tertiary block text-[10px] uppercase font-mono">Design Revisions</span>
+                  <span class="font-mono text-ink font-medium">${d.revisions} Minor Rounds</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const rawText = `PROPOSAL PENGEMBANGAN WEBSITE
+UNTUK: ${d.brand} (${d.ig})
+KONTAK: ${d.client}
+TANGGAL: ${d.todayFormatted}
+PREPARED BY: ${d.studioName}
+==================================================
+
+1. RINGKASAN PROYEK
+Pembuatan landing page & portofolio digital representatif untuk ${d.brand}. Bertujuan membangun kredibilitas premium di hadapan calon pengantin dan memudahkan konversi konsultasi ke WhatsApp.
+
+2. PAKET & LINGKUP FITUR
+Paket: ${d.pkg}
+Target Peluncuran: ${d.deadlineFormatted}
+Batas Revisi: ${d.revisions} kali putaran minor
+
+Fitur yang termasuk:
+${d.features.map(f => `  • ${f}`).join('\n')}
+
+3. STRUKTUR INVESTASI
+Total Biaya: ${d.formattedPrice}
+  - Uang Muka (DP ${d.dpPercent}%): ${d.formattedDp} (Saat kickoff proyek)
+  - Pelunasan Sisa: ${d.formattedRemaining} (Sebelum website publish/live)
+
+Kontak Pengembang: ${d.waNumber}
+`;
+
+        return { visualHtml, rawText };
+      },
+
+      /* TEMPLATE 2: INVOICE */
+      templateInvoice(d) {
+        const visualHtml = `
+          <div id="preview-paper" class="space-y-6">
+            <!-- Invoice Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-hairline pb-5">
+              <div>
+                <span class="text-[10px] uppercase font-mono tracking-widest text-primary font-bold">OFFICIAL INVOICE</span>
+                <h2 class="text-2xl font-bold font-mono tracking-tight text-ink mt-0.5">${d.invoiceNo}</h2>
+                <p class="text-xs text-ink-subtle mt-1">${d.studioName}</p>
+              </div>
+              <div class="text-right text-xs space-y-1 font-mono">
+                <div><span class="text-ink-tertiary">Date:</span> <span class="text-ink">${d.todayFormatted}</span></div>
+                <div><span class="text-ink-tertiary">Due Date:</span> <span class="text-ink">${d.deadlineFormatted}</span></div>
+                <div><span class="text-ink-tertiary">Status:</span> <span class="text-xs px-2 py-0.5 rounded-full bg-surface-2 border border-hairline text-ink-subtle font-medium">Pending DP</span></div>
+              </div>
+            </div>
+
+            <!-- Billed To -->
+            <div class="bg-canvas border border-hairline rounded-md p-4 flex flex-col sm:flex-row justify-between gap-3 text-xs">
+              <div>
+                <span class="text-[10px] uppercase font-mono text-ink-tertiary block mb-1">Billed To</span>
+                <div class="font-semibold text-ink text-sm">${d.brand}</div>
+                <div class="text-ink-subtle">Attn: ${d.client}</div>
+                <div class="font-mono text-primary text-[11px]">${d.ig}</div>
+              </div>
+              <div class="text-right sm:text-right">
+                <span class="text-[10px] uppercase font-mono text-ink-tertiary block mb-1">Project Code</span>
+                <span class="font-mono text-ink text-xs">WO-${d.pkg.replace(/\s+/g, '-').toUpperCase()}</span>
+              </div>
+            </div>
+
+            <!-- Itemized Table -->
+            <div class="border border-hairline rounded-md overflow-hidden text-xs">
+              <table class="w-full text-left">
+                <thead class="bg-surface-2 border-b border-hairline text-ink-tertiary font-mono uppercase text-[10px]">
+                  <tr>
+                    <th class="p-3">Description</th>
+                    <th class="p-3 text-center">Qty</th>
+                    <th class="p-3 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-hairline">
+                  <tr>
+                    <td class="p-3">
+                      <div class="font-medium text-ink">${d.pkg} Website Setup & Development</div>
+                      <div class="text-[11px] text-ink-subtle mt-0.5">Includes: ${d.features.join(', ')} (${d.revisions} rounds revision)</div>
+                    </td>
+                    <td class="p-3 text-center font-mono text-ink-subtle">1</td>
+                    <td class="p-3 text-right font-mono font-medium text-ink">${d.formattedPrice}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Totals & Payment Breakdown -->
+            <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <!-- Payment Instructions -->
+              <div class="bg-canvas border border-hairline rounded-md p-3.5 text-xs flex-1 w-full space-y-1.5">
+                <span class="text-[10px] uppercase font-mono text-ink-tertiary block font-semibold">Payment Details</span>
+                <div class="text-ink font-mono font-medium">${d.bankDetails}</div>
+                <p class="text-[11px] text-ink-subtle">Please send payment confirmation screenshot via WhatsApp to <span class="text-primary font-mono">${d.waNumber}</span>.</p>
+              </div>
+
+              <!-- Calculation Summary -->
+              <div class="w-full sm:w-64 bg-surface-2 border border-hairline rounded-md p-3.5 text-xs space-y-2 font-mono">
+                <div class="flex justify-between text-ink-subtle">
+                  <span>Subtotal:</span>
+                  <span>${d.formattedPrice}</span>
+                </div>
+                <div class="flex justify-between text-ink font-medium border-t border-hairline pt-2">
+                  <span>Total Due:</span>
+                  <span class="text-sm font-bold text-ink">${d.formattedPrice}</span>
+                </div>
+                <div class="flex justify-between text-primary font-semibold border-t border-hairline pt-2">
+                  <span>DP Due Now (${d.dpPercent}%):</span>
+                  <span>${d.formattedDp}</span>
+                </div>
+                <div class="flex justify-between text-ink-tertiary text-[11px]">
+                  <span>Pelunasan (Launch):</span>
+                  <span>${d.formattedRemaining}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const rawText = `INVOICE / TAGIHAN LAYANAN WEB
+No. Invoice: ${d.invoiceNo}
+Tanggal: ${d.todayFormatted}
+Batas Pembayaran: ${d.deadlineFormatted}
+==================================================
+
+DITUJUKAN KEPADA:
+Klien: ${d.client}
+Brand: ${d.brand} (${d.ig})
+
+RINCIAN TAGIHAN:
+1. Pengembangan Website Paket ${d.pkg}
+   Fitur: ${d.features.join(', ')}
+   Revisi: Maksimal ${d.revisions} kali
+   Harga: ${d.formattedPrice}
+
+TOTAL TAGIHAN: ${d.formattedPrice}
+Uang Muka (DP ${d.dpPercent}%): ${d.formattedDp} (Jatuh tempo sekarang)
+Sisa Pelunasan: ${d.formattedRemaining} (Sebelum serah terima & live)
+
+METODE PEMBAYARAN:
+Transfer Bank: ${d.bankDetails}
+Konfirmasi Bukti Transfer: ${d.waNumber}
+`;
+
+        return { visualHtml, rawText };
+      },
+
+      /* TEMPLATE 3: AGREEMENT (SPK) */
+      templateAgreement(d) {
+        const visualHtml = `
+          <div id="preview-paper" class="space-y-6 text-xs leading-relaxed text-ink-muted">
+            <!-- Agreement Title -->
+            <div class="text-center border-b border-hairline pb-4">
+              <span class="text-[10px] uppercase font-mono tracking-widest text-primary font-bold">SURAT PERJANJIAN KERJA SAMA (SPK)</span>
+              <h2 class="text-base font-bold text-ink mt-1">PENGEMBANGAN WEBSITE & PORTFOLIO DIGITAL</h2>
+              <div class="text-[11px] font-mono text-ink-subtle mt-0.5">Nomor: ${d.agreementNo}</div>
+            </div>
+
+            <p>
+              Pada hari ini, tanggal <strong class="text-ink">${d.todayFormatted}</strong>, dibuat dan ditandatangani surat perjanjian kerja sama pengembangan website oleh dan antara:
+            </p>
+
+            <!-- Parties -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-canvas border border-hairline rounded-md p-3.5">
+              <div>
+                <span class="text-[10px] font-mono uppercase text-ink-tertiary block font-semibold">PIHAK PERTAMA (Penyedia Jasa)</span>
+                <div class="font-medium text-ink mt-0.5">${d.studioName}</div>
+                <div class="text-ink-subtle text-[11px]">Spesialis Web & Portofolio Freelance</div>
+              </div>
+              <div>
+                <span class="text-[10px] font-mono uppercase text-ink-tertiary block font-semibold">PIHAK KEDUA (Klien)</span>
+                <div class="font-medium text-ink mt-0.5">${d.client}</div>
+                <div class="text-ink-subtle text-[11px]">${d.brand} (${d.ig})</div>
+              </div>
+            </div>
+
+            <!-- Articles -->
+            <div class="space-y-3.5 pt-1">
+              <div>
+                <h4 class="font-semibold text-ink text-xs uppercase tracking-wider font-mono">Pasal 1 — Ruang Lingkup Pekerjaan</h4>
+                <p class="mt-1">
+                  Pihak Pertama berkewajiban merancang dan membangun website untuk Pihak Kedua dengan paket <strong class="text-ink">${d.pkg}</strong> yang mencakup fitur terpilih: <span class="text-ink">${d.features.join(', ')}</span>.
+                </p>
+              </div>
+
+              <div>
+                <h4 class="font-semibold text-ink text-xs uppercase tracking-wider font-mono">Pasal 2 — Biaya & Tata Cara Pembayaran</h4>
+                <ol class="list-decimal list-inside space-y-1 mt-1">
+                  <li>Total nilai kontrak disepakati sebesar <strong class="text-ink font-mono">${d.formattedPrice}</strong>.</li>
+                  <li>Pihak Kedua membayarkan Uang Muka (DP) sebesar <strong class="text-ink font-mono">${d.dpPercent}% (${d.formattedDp})</strong> sebelum pengerjaan proyek dimulai.</li>
+                  <li>Sisa pelunasan sebesar <strong class="text-ink font-mono">${d.formattedRemaining}</strong> dibayarkan setelah seluruh proses revisi selesai dan sebelum website resmi ditautkan ke domain utama.</li>
+                </ol>
+              </div>
+
+              <div>
+                <h4 class="font-semibold text-ink text-xs uppercase tracking-wider font-mono">Pasal 3 — Batas Waktu & Ketentuan Revisi</h4>
+                <ol class="list-decimal list-inside space-y-1 mt-1">
+                  <li>Target penyelesaian pengerjaan draf pertama adalah tanggal <strong class="text-ink">${d.deadlineFormatted}</strong> terhitung sejak materi lengkap diterima.</li>
+                  <li>Pihak Kedua berhak mendapatkan batas revisi desain maksimal sebanyak <strong class="text-ink font-mono">${d.revisions} (dua) kali</strong> putaran minor. Revisi di luar kesepakatan akan dikenakan biaya addendum.</li>
+                </ol>
+              </div>
+
+              <div>
+                <h4 class="font-semibold text-ink text-xs uppercase tracking-wider font-mono">Pasal 4 — Hak Cipta & Aset</h4>
+                <p class="mt-1">
+                  Seluruh materi foto dan teks pernikahan yang diserahkan tetap merupakan hak milik Pihak Kedua. Pihak Pertama berhak mencantumkan hasil karya di portofolio studio.
+                </p>
+              </div>
+            </div>
+
+            <!-- Signatures -->
+            <div class="pt-5 border-t border-hairline grid grid-cols-2 gap-8 text-center text-xs">
+              <div>
+                <span class="text-ink-tertiary block font-mono text-[10px]">PIHAK PERTAMA</span>
+                <div class="h-16 flex items-end justify-center font-serif text-ink-subtle italic">Tanda Tangan</div>
+                <div class="font-medium text-ink pt-1 border-t border-hairline mx-6">${d.studioName}</div>
+              </div>
+              <div>
+                <span class="text-ink-tertiary block font-mono text-[10px]">PIHAK KEDUA</span>
+                <div class="h-16 flex items-end justify-center font-serif text-ink-subtle italic">Tanda Tangan</div>
+                <div class="font-medium text-ink pt-1 border-t border-hairline mx-6">${d.client}</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const rawText = `SURAT PERJANJIAN KERJA SAMA (SPK)
+PENGEMBANGAN WEBSITE & PORTOFOLIO DIGITAL
+Nomor: ${d.agreementNo}
+Tanggal: ${d.todayFormatted}
+==================================================
+
+PIHAK PERTAMA (Penyedia Jasa):
+Nama: ${d.studioName}
+
+PIHAK KEDUA (Klien):
+Nama: ${d.client}
+Entitas: ${d.brand} (${d.ig})
+
+PASAL 1: RUANG LINGKUP PEKERJAAN
+Pengembangan website paket ${d.pkg} mencakup fitur:
+${d.features.join(', ')}.
+
+PASAL 2: BIAYA & PEMBAYARAN
+1. Total investasi disepakati: ${d.formattedPrice}
+2. Pembayaran DP ${d.dpPercent}%: ${d.formattedDp} (saat penandatanganan SPK)
+3. Pelunasan sisa: ${d.formattedRemaining} (sebelum website live/serah terima)
+
+PASAL 3: WAKTU & REVISI
+1. Target penyelesaian: ${d.deadlineFormatted}
+2. Batas revisi desain: Maksimal ${d.revisions} kali putaran minor
+
+PASAL 4: HAK CIPTA
+Aset visual tetap milik Pihak Kedua. Pihak Pertama berhak menggunakan karya sebagai portofolio.
+
+Tertanda,
+Pihak Pertama: ${d.studioName}
+Pihak Kedua: ${d.client}
+`;
+
+        return { visualHtml, rawText };
+      },
+
+      /* TEMPLATE 4: WELCOME EMAIL */
+      templateWelcomeEmail(d) {
+        const visualHtml = `
+          <div id="preview-paper" class="space-y-5 text-xs text-ink-muted">
+            <!-- Email Metadata Header -->
+            <div class="bg-canvas border border-hairline rounded-md p-3.5 space-y-1.5 font-mono text-[11px]">
+              <div><span class="text-ink-tertiary">To:</span> <span class="text-ink">${d.client} &lt;${d.ig}&gt;</span></div>
+              <div><span class="text-ink-tertiary">From:</span> <span class="text-ink">${d.studioName}</span></div>
+              <div><span class="text-ink-tertiary">Subject:</span> <span class="text-primary font-medium">Welcome & Kickoff Proyek Website ${d.brand} 💍</span></div>
+            </div>
+
+            <!-- Email Body -->
+            <div class="space-y-3.5 leading-relaxed">
+              <p>
+                Halo Kak <strong class="text-ink">${d.client}</strong> dan tim <strong class="text-ink">${d.brand}</strong>,
+              </p>
+
+              <p>
+                Selamat bergabung! Kami sangat bersemangat untuk memulai kerja sama pembuatan website & portfolio digital baru untuk <strong class="text-ink">${d.brand}</strong>. Tujuan utama kita adalah membangun kehadiran online yang elegan, responsif di smartphone, dan siap mengonversi calon pengantin menjadi klien yang memesan.
+              </p>
+
+              <!-- Quick Summary Card -->
+              <div class="bg-surface-2 border border-hairline rounded-md p-3.5 space-y-1.5">
+                <span class="text-[10px] uppercase font-mono text-ink-tertiary block font-semibold">Ringkasan Proyek</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-xs">
+                  <div>
+                    <span class="text-ink-tertiary block text-[10px]">Paket:</span>
+                    <span class="text-ink font-medium">${d.pkg}</span>
+                  </div>
+                  <div>
+                    <span class="text-ink-tertiary block text-[10px]">Target Selesai:</span>
+                    <span class="text-ink font-medium">${d.deadlineFormatted}</span>
+                  </div>
+                  <div>
+                    <span class="text-ink-tertiary block text-[10px]">Total Fee:</span>
+                    <span class="text-ink font-medium">${d.formattedPrice}</span>
+                  </div>
+                  <div>
+                    <span class="text-ink-tertiary block text-[10px]">Batas Revisi:</span>
+                    <span class="text-ink font-medium">${d.revisions} Sesi</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Asset Checklist -->
+              <div class="space-y-2">
+                <span class="text-xs font-semibold text-ink uppercase tracking-wider block">📋 Checklist Materi yang Perlu Disiapkan:</span>
+                <div class="bg-canvas border border-hairline rounded-md p-3 space-y-2">
+                  <div class="flex items-start gap-2">
+                    <span class="text-primary font-mono font-bold">1.</span>
+                    <span><strong>Logo & Brand Guidelines:</strong> File logo resolusi tinggi (format PNG transparan atau SVG).</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-primary font-mono font-bold">2.</span>
+                    <span><strong>Foto-Foto Dokumentasi Pernikahan:</strong> 15-25 foto terbaik (momen Akad, Resepsi, Detail Dekorasi, & Busana Pengantin).</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-primary font-mono font-bold">3.</span>
+                    <span><strong>Daftar Paket WO:</strong> Rincian paket layanan (Akad Only, Intimate Wedding, All-in Package, dll).</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-primary font-mono font-bold">4.</span>
+                    <span><strong>Testimoni Pengantin:</strong> 3-5 kutipan ulasan nyata dari pasangan yang pernah menggunakan jasa ${d.brand}.</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-primary font-mono font-bold">5.</span>
+                    <span><strong>Nomor WhatsApp Admin:</strong> Nomor aktif untuk tombol booking langsung.</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Next Steps -->
+              <div class="space-y-1.5">
+                <span class="text-xs font-semibold text-ink uppercase tracking-wider block">🚀 Langkah Selanjutnya:</span>
+                <ol class="list-decimal list-inside space-y-1">
+                  <li>Mohon lakukan pembayaran Down Payment (DP ${d.dpPercent}%): <strong class="text-ink font-mono">${d.formattedDp}</strong> ke rekening pada Invoice terlampir.</li>
+                  <li>Unggah materi foto & aset ke tautan Google Drive khusus yang telah kami sediakan.</li>
+                  <li>Setelah seluruh materi siap, draf interaktif pertama akan kami presentasikan sesuai jadwal.</li>
+                </ol>
+              </div>
+
+              <p class="pt-2">
+                Jika ada pertanyaan atau butuh bantuan dalam kurasi foto, silakan hubungi kami kapan saja via WhatsApp di <strong class="text-primary font-mono">${d.waNumber}</strong>. Terima kasih dan mari berkarya bersama!
+              </p>
+
+              <div class="pt-2 text-ink-subtle">
+                Salam hangat,<br>
+                <strong class="text-ink">${d.studioName}</strong>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const rawText = `Subject: Welcome & Kickoff Proyek Website ${d.brand} 💍
+
+Halo Kak ${d.client} dan tim ${d.brand},
+
+Selamat bergabung! Kami sangat bersemangat untuk memulai pengerjaan website & portofolio digital baru untuk ${d.brand} (${d.ig}).
+
+RINGKASAN PROYEK:
+- Paket Layanan: ${d.pkg}
+- Target Peluncuran: ${d.deadlineFormatted}
+- Total Investasi: ${d.formattedPrice}
+- Uang Muka (DP ${d.dpPercent}%): ${d.formattedDp}
+- Kuota Revisi: ${d.revisions} kali putaran minor
+
+📋 CHECKLIST MATERI YANG PERLU DISIAPKAN:
+1. File Logo resolusi tinggi (.PNG transparan atau .SVG)
+2. Foto-foto pernikahan terbaik (Akad, Resepsi, Dekorasi, Pengantin)
+3. Rincian paket layanan & pricelist Wedding Organizer
+4. Testimoni dari pasangan pengantin yang pernah menggunakan jasa ${d.brand}
+5. Nomor WhatsApp admin untuk tombol direct chat
+
+LANGKAH SELANJUTNYA:
+1. Pembayaran DP sebesar ${d.formattedDp} ke rekening ${d.bankDetails}.
+2. Mengunggah foto-foto ke folder Google Drive bersama.
+3. Kami akan mengirimkan preview tampilan pertama dalam 5-7 hari kerja.
+
+Jika ada pertanyaan, langsung kabari via WhatsApp di ${d.waNumber}.
+
+Salam hangat,
+${d.studioName}
+`;
+
+        return { visualHtml, rawText };
+      },
+
+      /* ========================================== */
+      /* EXPORT LOGIC: COPY, PDF, DOCX */
+      /* ========================================== */
+      copyCurrentDocument() {
+        const rawEl = document.getElementById('raw-text-content');
+        const text = rawEl.textContent;
+        if (!text) return;
+
+        navigator.clipboard.writeText(text).then(() => {
+          this.showToast('Copied document text to clipboard!');
+        }).catch(err => {
+          console.error('Failed to copy', err);
+          // Fallback
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          this.showToast('Copied to clipboard');
+        });
+      },
+
+      downloadPDF() {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+          alert('PDF generation library is still loading. Please try again in a moment.');
+          return;
+        }
+
+        const d = this.getComputedValues();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+        const docTypeTitles = {
+          proposal: 'PROPOSAL PENGEMBANGAN WEBSITE',
+          invoice: 'INVOICE TAGIHAN LAYANAN WEBSITE',
+          agreement: 'SURAT PERJANJIAN KERJA SAMA (SPK)',
+          email: 'CLIENT ONBOARDING & WELCOME BRIEF'
+        };
+
+        const pageTitle = docTypeTitles[this.currentTab] || 'DOKUMEN FREELANCE';
+        const brandClean = (d.brand || 'Client').replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `${this.currentTab.toUpperCase()}_${brandClean}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        // PDF Styling using Linear dark/neutral aesthetics
+        const margin = 40;
+        let y = 50;
+
+        // Header Top Bar
+        doc.setFillColor(15, 16, 17); // #0f1011
+        doc.rect(margin, y, 515, 55, 'F');
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(247, 248, 248); // #f7f8f8
+        doc.text(pageTitle, margin + 14, y + 25);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(138, 143, 152); // #8a8f98
+        doc.text(`${d.studioName} • Ref: ${d.currentTab.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`, margin + 14, y + 42);
+
+        doc.text(`Date: ${d.todayFormatted}`, 555 - margin, y + 25, { align: 'right' });
+        y += 75;
+
+        // Client info card
+        doc.setDrawColor(35, 37, 42); // hairline #23252a
+        doc.setFillColor(248, 249, 250);
+        doc.roundedRect(margin, y, 515, 60, 4, 4, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(20, 21, 22);
+        doc.text(`Client: ${d.client}`, margin + 14, y + 20);
+        doc.text(`Brand / WO: ${d.brand} (${d.ig})`, margin + 14, y + 36);
+        doc.text(`Target Launch: ${d.deadlineFormatted}`, margin + 14, y + 50);
+
+        doc.text(`Package: ${d.pkg}`, 555 - margin, y + 20, { align: 'right' });
+        doc.text(`Total Fee: ${d.formattedPrice}`, 555 - margin, y + 36, { align: 'right' });
+        doc.setTextColor(94, 106, 210); // primary #5e6ad2
+        doc.text(`DP (${d.dpPercent}%): ${d.formattedDp}`, 555 - margin, y + 50, { align: 'right' });
+        y += 80;
+
+        // Content Body according to Tab
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(40, 40, 40);
+
+        const rawText = document.getElementById('raw-text-content').textContent;
+        const lines = doc.splitTextToSize(rawText, 515);
+
+        lines.forEach(line => {
+          if (y > 780) {
+            doc.addPage();
+            y = 50;
+          }
+          if (line.startsWith('===') || line.startsWith('1.') || line.startsWith('2.') || line.startsWith('3.') || line.startsWith('PASAL') || line.startsWith('RINGKASAN') || line.startsWith('CHECKLIST')) {
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 16, 17);
+            y += 4;
+          } else {
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(60, 60, 60);
+          }
+          doc.text(line, margin, y);
+          y += 14;
+        });
+
+        // Footer on all pages
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setDrawColor(200, 200, 200);
+          doc.line(margin, 800, 555, 800);
+          doc.setFontSize(8);
+          doc.setTextColor(120, 120, 120);
+          doc.text(`${d.studioName} — Document Generated for ${d.brand}`, margin, 814);
+          doc.text(`Page ${i} of ${pageCount}`, 555, 814, { align: 'right' });
+        }
+
+        doc.save(filename);
+        this.showToast(`Exported PDF: ${filename}`);
+      },
+
+      async downloadDOCX() {
+        if (!window.docx) {
+          alert('DOCX generation library is still loading. Please try again in a moment.');
+          return;
+        }
+
+        const d = this.getComputedValues();
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = window.docx;
+
+        const docTypeTitles = {
+          proposal: 'PROPOSAL PENGEMBANGAN WEBSITE',
+          invoice: 'INVOICE TAGIHAN LAYANAN WEBSITE',
+          agreement: 'SURAT PERJANJIAN KERJA SAMA (SPK)',
+          email: 'WELCOME BRIEF & CLIENT ONBOARDING'
+        };
+
+        const pageTitle = docTypeTitles[this.currentTab] || 'DOKUMEN FREELANCE';
+        const brandClean = (d.brand || 'Client').replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `${this.currentTab.toUpperCase()}_${brandClean}_${new Date().toISOString().split('T')[0]}.docx`;
+
+        const rawText = document.getElementById('raw-text-content').textContent;
+        const paragraphs = [];
+
+        // Title
+        paragraphs.push(new Paragraph({
+          text: pageTitle,
+          heading: HeadingLevel.TITLE,
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 120 }
+        }));
+
+        // Studio subtitle
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({ text: `${d.studioName} • Date: ${d.todayFormatted}`, italics: true, color: '666666' })
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 240 }
+        }));
+
+        // Client info box
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({ text: 'Client Name: ', bold: true }),
+            new TextRun({ text: `${d.client} | Brand: ${d.brand} (${d.ig})\n` }),
+            new TextRun({ text: 'Package: ', bold: true }),
+            new TextRun({ text: `${d.pkg} (Fee: ${d.formattedPrice} | DP: ${d.formattedDp})\n` }),
+            new TextRun({ text: 'Target Launch: ', bold: true }),
+            new TextRun({ text: `${d.deadlineFormatted}` })
+          ],
+          spacing: { after: 300 }
+        }));
+
+        // Content lines
+        const lines = rawText.split('\n');
+        lines.forEach(line => {
+          if (!line.trim()) {
+            paragraphs.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+            return;
+          }
+
+          if (line.startsWith('===') || line.startsWith('---')) {
+            return;
+          }
+
+          if (line.startsWith('1.') || line.startsWith('2.') || line.startsWith('3.') || line.startsWith('PASAL') || line.startsWith('RINGKASAN') || line.startsWith('CHECKLIST') || line.startsWith('Subject:')) {
+            paragraphs.push(new Paragraph({
+              children: [new TextRun({ text: line, bold: true, size: 24, color: '1A1A1A' })],
+              spacing: { before: 200, after: 100 }
+            }));
+          } else if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
+            paragraphs.push(new Paragraph({
+              children: [new TextRun({ text: line.trim() })],
+              bullet: { level: 0 },
+              spacing: { after: 60 }
+            }));
+          } else {
+            paragraphs.push(new Paragraph({
+              children: [new TextRun({ text: line })],
+              spacing: { after: 80 }
+            }));
+          }
+        });
+
+        const doc = new Document({
+          sections: [{
+            properties: {},
+            children: paragraphs
+          }]
+        });
+
+        try {
+          const blob = await Packer.toBlob(doc);
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          link.click();
+          URL.revokeObjectURL(link.href);
+          this.showToast(`Exported DOCX: ${filename}`);
+        } catch (err) {
+          console.error('Failed to generate DOCX', err);
+          alert('Could not export DOCX: ' + err.message);
+        }
+      },
+
+      /* ========================================== */
+      /* CLIENT HISTORY MANAGEMENT */
+      /* ========================================== */
+      getHistory() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      },
+
+      saveHistory(list) {
+        localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(list));
+        this.renderHistory();
+      },
+
+      saveCurrentToHistory() {
+        this.readFormValues();
+        const clientName = this.state.clientName || 'Untitled Client';
+        const brandName = this.state.brandName || 'Untitled Brand';
+
+        const history = this.getHistory();
+        const newEntry = {
+          id: 'client_' + Date.now(),
+          savedAt: new Date().toLocaleDateString('id-ID', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          data: { ...this.state }
+        };
+
+        // Prepend new item
+        history.unshift(newEntry);
+        // Keep max 20 entries
+        if (history.length > 20) history.pop();
+
+        this.saveHistory(history);
+        this.showToast(`Saved "${brandName}" to history`);
+      },
+
+      loadFromHistory(id) {
+        const history = this.getHistory();
+        const entry = history.find(item => item.id === id);
+        if (!entry) return;
+
+        this.state = { ...defaultFormData, ...entry.data };
+        this.populateFormFields();
+        this.saveFormState();
+        this.renderCurrentTab();
+        this.showToast(`Loaded "${this.state.brandName || this.state.clientName}" into form`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+
+      deleteFromHistory(id) {
+        const history = this.getHistory().filter(item => item.id !== id);
+        this.saveHistory(history);
+        this.showToast('Item deleted from history');
+      },
+
+      clearHistory() {
+        if (!confirm('Clear all saved clients from history?')) return;
+        localStorage.removeItem(STORAGE_KEY_HISTORY);
+        this.renderHistory();
+        this.showToast('History cleared');
+      },
+
+      renderHistory() {
+        const history = this.getHistory();
+        const container = document.getElementById('history-list-container');
+        const countBadge = document.getElementById('history-count');
+        const clearBtn = document.getElementById('btn-clear-history');
+
+        countBadge.textContent = `${history.length} saved`;
+
+        if (history.length > 0) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+
+        if (history.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-6 border border-dashed border-hairline rounded-md text-xs text-ink-tertiary">
+              <svg class="w-6 h-6 mx-auto mb-1.5 text-ink-tertiary opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              No saved clients in history yet. Click "Save Client" or load sample data.
+            </div>
+          `;
+          return;
+        }
+
+        const itemsHtml = history.map(item => {
+          const d = item.data;
+          const priceFormatted = this.formatCurrency(d.packagePrice);
+          return `
+            <div class="flex items-center justify-between p-3 rounded-md bg-canvas border border-hairline hover:border-hairline-strong transition-colors text-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-7 h-7 rounded bg-surface-2 border border-hairline flex items-center justify-center font-bold text-primary flex-shrink-0 text-[11px]">
+                  ${(d.brandName || 'WO').substring(0, 2).toUpperCase()}
+                </div>
+                <div class="truncate">
+                  <div class="font-medium text-ink flex items-center gap-2 truncate">
+                    <span>${d.brandName || 'Untitled Brand'}</span>
+                    <span class="text-[10px] text-ink-subtle font-mono">${d.instagramHandle || ''}</span>
+                  </div>
+                  <div class="text-[11px] text-ink-tertiary truncate">
+                    ${d.clientName || 'No contact'} • <span class="font-mono text-ink-subtle">${d.packageName}</span> • <span class="font-mono text-ink">${priceFormatted}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+                <span class="text-[10px] font-mono text-ink-tertiary hidden sm:inline">${item.savedAt}</span>
+                <button 
+                  onclick="App.loadFromHistory('${item.id}')" 
+                  class="px-2.5 py-1 rounded bg-surface-2 hover:bg-surface-3 text-ink text-xs font-medium border border-hairline transition-colors">
+                  Load
+                </button>
+                <button 
+                  onclick="App.deleteFromHistory('${item.id}')" 
+                  class="p-1 rounded text-ink-tertiary hover:text-ink hover:bg-surface-2 transition-colors" 
+                  title="Delete">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        container.innerHTML = itemsHtml;
+      },
+
+      /* ========================================== */
+      /* MODULAR ROUTER & FUTURE PAGES EXPANSION */
+      /* ========================================== */
+      switchPage(pageId) {
+        this.activePage = pageId;
+        // In this single page app, doc-generator is the main page.
+        // Modular structure allows adding full views dynamically:
+        document.querySelectorAll('.nav-item').forEach(el => {
+          if (el.getAttribute('data-page') === pageId) {
+            el.className = 'nav-item w-full flex items-center justify-between px-2.5 py-2 rounded-md text-sm font-medium transition-colors bg-surface-2 text-ink border border-hairline';
+          }
+        });
+      },
+
+      showComingSoon(featureName) {
+        this.showToast(`${featureName} is coming in the next update! Stay tuned.`);
+      },
+
+      exportAllDataJSON() {
+        const fullBackup = {
+          form: this.state,
+          settings: this.settings,
+          history: this.getHistory(),
+          exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(fullBackup, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `freelance_tools_backup_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      },
+
+      showToast(message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'animate-toast bg-surface-3 border border-hairline text-ink text-xs px-3.5 py-2.5 rounded-md shadow-lg flex items-center gap-2 pointer-events-auto';
+        toast.innerHTML = `
+          <span class="w-1.5 h-1.5 rounded-full bg-semantic-success flex-shrink-0"></span>
+          <span>${message}</span>
+        `;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(8px)';
+          toast.style.transition = 'all 0.2s ease';
+          setTimeout(() => toast.remove(), 200);
+        }, 3000);
+      }
+    };
+
+    // Initialize application when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+  </script>
+</body>
+</html>
